@@ -68,6 +68,8 @@ func init() {
 				),
 			),
 			extension.DefinitionList,
+			extension.Footnote,
+			extension.GFM,
 		),
 		goldmark.WithExtensions(mathjax.MathJax),
 		goldmark.WithParserOptions(
@@ -143,7 +145,7 @@ func main() {
 	n := negroni.New(
 		negroni.NewRecovery(),
 		negroni.NewLogger(),
-		negroni.NewStatic(http.Dir(*path)),
+		negroni.NewStatic(http.Dir(filepath.Join(*path, "public"))),
 	)
 	n.UseHandler(router)
 
