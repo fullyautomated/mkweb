@@ -101,7 +101,7 @@ func renderFile(fn string, w io.Writer) {
 		log.Panicln("Template value is nil")
 	}
 
-	tmpl, err := ioutil.ReadFile(fmt.Sprintf("%s%s", *path, tmplFilename.(string)))
+	tmpl, err := ioutil.ReadFile(filepath.Join(*path, tmplFilename.(string)))
 	if err != nil {
 		log.Panicln(fmt.Errorf("Could not read template file referenced in markdown: %v", err))
 	}
