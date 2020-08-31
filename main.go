@@ -32,6 +32,7 @@ var (
 	path     *string
 	chroma   *string
 	addr     *string
+	outp     *string
 )
 
 var usage = `mkweb, a simple static site generator
@@ -44,8 +45,9 @@ Options:
 func init() {
 	chroma = flag.String("chroma", "monokai", "Chroma code highlighter theme")
 	file = flag.String("file", "", "CommonMark file to convert")
-	path = flag.String("path", "", "Path with CommonMark files to serve")
+	path = flag.String("path", "", "Path with CommonMark files")
 	addr = flag.String("addr", "localhost:3000", "HTTP service address")
+	outp = flag.String("outp", "", "convert path arg instead to output folder")
 
 	flag.Usage = func() {
 		fmt.Fprintf(flag.CommandLine.Output(), usage, os.Args[0])
@@ -53,10 +55,6 @@ func init() {
 	}
 
 	flag.Parse()
-
-	if len(*path) > 0 {
-		*path = *path + "/"
-	}
 
 	markdown = goldmark.New(
 		goldmark.WithExtensions(
@@ -87,7 +85,7 @@ func init() {
 func renderFile(fn string, w io.Writer) {
 	var buf bytes.Buffer
 
-	source, err := ioutil.ReadFile(fmt.Sprintf("%s%s", *path, fn))
+	source, err := ioutil.ReadFile(filepath.Join(*path, fn))
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -122,6 +120,35 @@ func main() {
 
 	if len(*file) > 0 {
 		renderFile(*file, os.Stdout)
+		return
+	} else if len(*outp) > 0 && len(*path) > 0 {
+		err := filepath.Walk(*path, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", path, err)
+				return err
+			}
+			if info.IsDir() {
+				if strings.HasSuffix(path, "public") {
+					return filepath.SkipDir
+				}
+				fmt.Printf("walking %s\n", path)
+			}
+			ext := strings.ToLower(filepath.Ext(path))
+			if ext == ".md" {
+				fmt.Printf("converting %s\n", path)
+				fn := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+				f, err := os.Create(filepath.Join(*outp, fn+".html"))
+				if err != nil {
+					fmt.Printf("could not create output file %s: %v\n", fn, err)
+					return err
+				}
+				renderFile(filepath.Base(path), f)
+			}
+			return nil
+		})
+		if err != nil {
+			os.Exit(1)
+		}
 		return
 	}
 
